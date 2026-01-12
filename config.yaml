@@ -1,0 +1,3 @@
+data_dir:
+    root_dir: 'data'
+    train: 'trainc.csv'
