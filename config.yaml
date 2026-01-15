@@ -1,3 +1,9 @@
-data_dir:
-    root_dir: 'data'
-    train: 'trainc.csv'
+# config.yml
+paths:
+  raw_data: "data/raw_dataset.csv"
+  processed_data: "data/processed_data.csv"
+  model_path: "models/best_model.pkl"
+
+params:
+  test_size: 0.2
+  random_state: 42
