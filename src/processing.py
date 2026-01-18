@@ -1,7 +1,8 @@
 #Transformaciones, escalados, encoding
 import pandas as pd
+import numpy as np
 
-def get_one_value_col(df: pd.Dataframe) -> list[str] :
+def get_one_value_col(df: pd.DataFrame) -> list[str] :
     """Devuelve una lista de las columnas con un unico valor
 
     Args:
@@ -15,7 +16,7 @@ def get_one_value_col(df: pd.Dataframe) -> list[str] :
 
     return cols
 
-def get_two_values_col(df: pd.Dataframe) -> list[str] :
+def get_binary_cols(df: pd.DataFrame) -> list[str] :
     """Devuelve una lista de las columnas object con dos valores
 
     Args:
@@ -29,7 +30,7 @@ def get_two_values_col(df: pd.Dataframe) -> list[str] :
 
     return cols
 
-def get_more_two_values_col(df: pd.Dataframe) -> list[str] :
+def get_more_two_values_cols(df: pd.DataFrame) -> list[str] :
     """Devuelve una lista de las columnas object con mas de dos valores
 
     Args:
@@ -39,7 +40,7 @@ def get_more_two_values_col(df: pd.Dataframe) -> list[str] :
         list[str]: nombres de las columnas
     """
 
-    cols = [col for col in df.columns if df[col].dtype == 'object' and df[col].nunique() == 2]
+    cols = [col for col in df.columns if df[col].dtype == 'object' and df[col].nunique() > 2]
 
     return cols
 
@@ -89,5 +90,57 @@ def transform_dummies(cols: list[str] ,df: pd.DataFrame) -> pd.DataFrame :
     bool_cols = df_clean.select_dtypes(include='bool').columns
     df_clean[bool_cols] = df_clean[bool_cols].astype(int)
 
+    return df_clean
+
+
+def transform_log(df: pd.DataFrame, col: str) -> pd.DataFrame:
+    """
+    Aplica una transformación logarítmica (log1p) a una columna específica de un DataFrame.
+    
+    Args:
+        df (pd.DataFrame): El DataFrame a procesar.
+        column_name (str): El nombre de la columna a transformar.
+        
+    Returns:
+        pd.DataFrame: El DataFrame con la columna transformada.
+    """
+    # Verificamos si la columna existe para evitar errores
+    if col in df.columns:
+        df[col] = np.log1p(df[col])
+    else:
+        print(f"Error: La columna '{col}' no se encuentra en el DataFrame.")
+        
     return df
+
+def drop_columns(cols: list[str], df: pd.DataFrame) -> pd.DataFrame:
+    """Elimina columnas del dataframe, las que recibe por parametros, mas 4 extras
+
+    Args:
+        cols (list[str]): columnas
+        df (pd.DataFrame): data
+
+    Returns:
+        pd.DataFrame: data
+    """
+
+    df_clean = df.drop(columns=cols)
+
+    return df_clean
+
+def drop_extra_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Elimina columnas del dataframe
+
+    Args:
+        df (pd.DataFrame): data
+
+    Returns:
+        pd.DataFrame: data
+    """
+    extra_cols = ['DailyRate','MonthlyRate','HourlyRate','EmployeeNumber']
+
+    df_clean = df.drop(columns=extra_cols)
+
+    return df_clean
+
+
      
