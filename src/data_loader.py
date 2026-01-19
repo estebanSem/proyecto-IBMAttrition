@@ -22,7 +22,7 @@ def create_df(path: str) -> pd.DataFrame :
     config = yaml_parser.load_yaml(YAML_FILE)
 
     extractor = CsvExtractor()
-    df = extractor.extract(config['paths'][path])
+    df = extractor.extract(config['paths']['data'][path])
 
     return df
 

@@ -1,6 +1,7 @@
 #Funciones para metricas y graficas
 from sklearn.ensemble           import RandomForestClassifier
-from sklearn.metrics            import accuracy_score, classification_report, confusion_matrix
+from sklearn.metrics            import accuracy_score, classification_report, confusion_matrix, roc_auc_score, roc_curve
+from imblearn.pipeline          import Pipeline
 
 import plotly.express   as px
 import pandas           as pd
@@ -47,6 +48,7 @@ def show_heatmap(cols: list[str], df: pd.DataFrame) -> px.imshow:
     return gr
 
 def show_bar(df: pd.DataFrame, x: str, y: str) -> px.bar:
+    
 
     gr = px.bar(
         df, 
@@ -94,21 +96,43 @@ def show_confusion_matrix(y_test, pred, model_name: str) -> px.imshow :
 
     return fig
 
-def show_feature_importances(model: RandomForestClassifier) -> px.bar:
+def get_coeficientes(pipeline: Pipeline, X_train) -> pd.DataFrame:
 
-    feature_importances = model.feature_importances_
-    feature_names       = model.columns
+    coeficientes = pipeline.named_steps['lr'].coef_[0]
+    cols = X_train.columns
 
-    # 3. Crear un DataFrame para visualizar las importancias
-    importance_df = pd.DataFrame({
-        'Feature'   :   feature_names,
-        'Importance':   feature_importances
+    importancia_df = pd.DataFrame({
+        'Variable': cols,
+        'Coeficiente': coeficientes,
+        'Abs_Coeficiente': abs(coeficientes) # Usamos el valor absoluto para la importancia total
     })
 
-    importance_df = importance_df.sort_values(by='Importance', ascending=False)
+    importancia_df = importancia_df.sort_values(by='Coeficiente', ascending=False)
+
+    return importancia_df
+
+def show_coeficientes(df: pd.DataFrame) -> px.bar:
 
     fig = px.bar(
-        importance_df.head(25),
+        df.head(25),
+        x='Abs_Coeficiente',
+        y='Variable',
+        orientation='h',                             # Gráfico horizontal
+        title='Coeficientes',
+        labels={'Abs_Coeficiente': 'Coeficiente', 'Variable': 'Característica'},
+        color='Abs_Coeficiente',                          # Color basado en el valor
+        color_continuous_scale='Viridis',
+        width=1200,
+        height=800
+    )
+
+    return fig
+
+def show_feature_importances(df: pd.DataFrame ) -> px.bar:
+    
+
+    fig = px.bar(
+        df.head(25),
         x='Importance',
         y='Feature',
         orientation='h',                             # Gráfico horizontal
@@ -119,5 +143,70 @@ def show_feature_importances(model: RandomForestClassifier) -> px.bar:
         width=1200,
         height=800
     )
+
+    return fig
+
+def get_feature_importances(model: RandomForestClassifier, X_train) -> pd.DataFrame:
+    """Genera un dataframe con el peso de las variables en el modelo
+
+    Args:
+        model (RandomForestClassifier): modelo
+        X_train (_type_): Datos de entrenamiento X
+
+    Returns:
+        pd.DataFrame: dataframe con las columnas y los pesos
+    """
+
+    feature_importances = model.feature_importances_
+    feature_names       = X_train.columns
+
+    # 3. Crear un DataFrame para visualizar las importancias
+    importance_df = pd.DataFrame({
+        'Feature'   :   feature_names,
+        'Importance':   feature_importances
+    })
+
+    importance_df = importance_df.sort_values(by='Importance', ascending=False)
+
+    return importance_df
+
+def show_especificidad(y_test, pred) -> int | float :
+
+    tn, fp, fn, tp = confusion_matrix(y_test, pred).ravel()
+
+    especificidad = tn / ( tn + fp )
+
+    return especificidad
+
+def show_auc_roc(model, X_test, y_test) -> px.line :
+
+    y_probs = model.predict_proba(X_test)[:, 1]
+
+    fpr, tpr, umbrales = roc_curve(y_test, y_probs)
+
+    auc_score = roc_auc_score(y_test, y_probs)
+
+    df_roc = pd.DataFrame({
+        'FPR': fpr,
+        'TPR': tpr
+    })
+
+    fig = px.line(
+        df_roc, 
+        x='FPR', 
+        y='TPR',
+        title=f'Curva ROC (AUC = {auc_score:.2f})',
+        labels={'FPR': 'Tasa de Falsos Positivos', 'TPR': 'Tasa de Verdaderos Positivos'},
+        width=700, 
+        height=700
+    )
+
+    fig.add_shape(
+        type='line', line=dict(dash='dash', color='black'),
+        x0=0, x1=1, y0=0, y1=1
+    )
+
+    fig.update_yaxes(scaleanchor="x", scaleratio=1)
+    fig.update_xaxes(range=[0, 1], constrain='domain')
 
     return fig
