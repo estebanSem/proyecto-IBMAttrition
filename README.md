@@ -1,106 +1,91 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/QC8gg3LY)
-Para un "preprocesamiento complejo" (donde mezclas columnas numéricas, categóricas y reglas de negocio propias), la forma más robusta y profesional de hacerlo es combinando un `ColumnTransformer` (para tratar tipos de datos distintos) con una **clase personalizada**.
+Entender estas métricas es fundamental porque, en el mundo real, un modelo "preciso" no siempre es un modelo "bueno". Todo depende del problema que estés intentando resolver.
 
-Aquí tienes el código completo. Este archivo `.pkl` será "autónomo": incluirá tu lógica, tus transformaciones y el modelo.
-
-### 1. Definir la lógica personalizada y el Pipeline
-
-```python
-import pandas as pd
-import numpy as np
-import joblib
-from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.impute import SimpleImputer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.base import BaseEstimator, TransformerMixin
-
-# --- PASO 1: Tu lógica personalizada ---
-# Creamos una clase para "limpieza a medida" (ej: crear una columna de ratio)
-class FeatureEngineer(BaseEstimator, TransformerMixin):
-    def fit(self, X, y=None):
-        return self
-    
-    def transform(self, X):
-        X = X.copy()
-        # Ejemplo: Crear una variable compleja de ratio
-        if 'ingresos' in X.columns and 'gastos' in X.columns:
-            X['ratio_ahorro'] = X['ingresos'] / (X['gastos'] + 1)
-        return X
-
-# --- PASO 2: Definir qué hacer con cada tipo de columna ---
-col_numericas = ['edad', 'ingresos', 'gastos']
-col_categoricas = ['ciudad', 'tipo_cliente']
-
-# Transformador para números: Imputar nulos con mediana + Escalar
-num_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='median')),
-    ('scaler', StandardScaler())
-])
-
-# Transformador para categorías: Imputar con el más frecuente + OneHotEncoding
-cat_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='most_frequent')),
-    ('onehot', OneHotEncoder(handle_unknown='ignore')) # 'ignore' es vital para test ciegos
-])
-
-# Combinar todo el preprocesamiento
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', num_transformer, col_numericas),
-        ('cat', cat_transformer, col_categoricas)
-    ])
-
-# --- PASO 3: Crear el Pipeline Final ---
-full_pipeline = Pipeline(steps=[
-    ('custom_fe', FeatureEngineer()), # Primero tu lógica propia
-    ('preprocessor', preprocessor),   # Luego el tratamiento estándar
-    ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
-])
-
-# --- PASO 4: Entrenar y Persistir ---
-# full_pipeline.fit(X_train, y_train)
-joblib.dump(full_pipeline, 'modelo_complejo_rf.pkl')
-
-```
+Para explicarlo, usaremos el concepto de la **Matriz de Confusión**, que es la base de casi todas las demás.
 
 ---
 
-### 2. ¿Cómo lo evaluará tu profesor? (El test ciego)
+## 1. Matriz de Confusión (El Origen)
 
-En el ordenador de tu profesor, solo necesitará este código. Al haber usado un `Pipeline`, los datos nuevos se transformarán automáticamente siguiendo las reglas que tú definiste arriba.
+Es una tabla que resume los éxitos y fallos de un modelo de clasificación.
 
-```python
-import joblib
-
-# El profesor carga el modelo
-model = joblib.load('modelo_complejo_rf.pkl')
-
-# Supongamos que le llegan datos nuevos "sucios"
-datos_ciegos = pd.DataFrame({
-    'edad': [25, np.nan], 
-    'ingresos': [3000, 4500],
-    'gastos': [1500, 2000],
-    'ciudad': ['Madrid', 'Sevilla'],
-    'tipo_cliente': ['Premium', 'Básico']
-})
-
-# El pipeline hace la magia: crea el ratio, imputa el nulo, escala y predice
-predicciones = model.predict(datos_ciegos)
-print(predicciones)
-
-```
+* **Verdadero Positivo (TP):** El paciente tiene COVID y el test dice "Positivo". (Acierto)
+* **Verdadero Negativo (TN):** El paciente está sano y el test dice "Negativo". (Acierto)
+* **Falso Positivo (FP) - Error Tipo I:** El paciente está sano pero el test dice "Positivo". (Falsa alarma)
+* **Falso Negativo (FN) - Error Tipo II:** El paciente tiene COVID pero el test dice "Negativo". (Peligro: enfermo sin detectar)
 
 ---
 
-### ¿Por qué este código es "blind-test proof"?
+## 2. Accuracy (Exactitud)
 
-1. **`handle_unknown='ignore'`**: Si en el test ciego aparece una ciudad que no estaba en tus datos (ej: "Valencia"), el modelo no fallará, simplemente ignorará esa categoría. Sin esto, el código daría error.
-2. **`SimpleImputer`**: Si los datos del profesor traen valores vacíos (NaN), tu modelo los rellenará con la mediana que *tú* aprendiste en el entrenamiento.
-3. **`FeatureEngineer`**: Cualquier cálculo de columnas nuevas se replica exactamente igual.
+Es el porcentaje total de aciertos sobre el total de casos.
 
-**Nota importante:** Para que el profesor pueda cargar el archivo, él debe tener definida la clase `FeatureEngineer` en su script o tú debes entregársela en un archivo `.py` que él importe. Es el único requisito de Python para deserializar objetos personalizados.
 
-¿Quieres que te explique cómo estructurar el archivo para que tu profesor no tenga que copiar y pegar tu clase personalizada?
+* **¿Para qué sirve?** Para tener una visión general cuando las clases están **equilibradas** (hay la misma cantidad de "Sanos" que de "Enfermos").
+* **Ejemplo:** Clasificar si una foto es de un "Perro" o un "Gato" en un álbum donde hay 50 de cada uno.
+* **El peligro:** Si tienes 99 personas sanas y 1 enferma, y tu modelo siempre dice "Sano", tendrá un **99% de Accuracy**, pero será inútil porque no detectará al enfermo.
+
+---
+
+## 3. Precision (Precisión)
+
+De todos los que el modelo marcó como **positivos**, ¿cuántos lo eran realmente?
+
+
+* **¿Para qué sirve?** Cuando el coste de un **Falso Positivo** es muy alto.
+* **Ejemplo Real:** Un filtro de **Spam**. Prefieres que un correo de spam llegue a tu bandeja de entrada (Falso Negativo) antes de que un correo importante de tu jefe se vaya a la carpeta de correo no deseado (Falso Positivo). Aquí quieres **Alta Precisión**.
+
+---
+
+## 4. Recall / Sensibilidad (Exhaustividad)
+
+De todos los que eran **realmente positivos**, ¿cuántos logró detectar el modelo?
+
+
+* **¿Para qué sirve?** Cuando el coste de un **Falso Negativo** es crítico.
+* **Ejemplo Real:** Detección de **Cáncer**. Es preferible hacerle pruebas extra a alguien sano (Falso Positivo) que dejar ir a casa a alguien enfermo diciéndole que está sano (Falso Negativo). Aquí quieres **Alto Recall**.
+
+---
+
+## 5. Especificidad
+
+De todos los que eran **realmente negativos**, ¿cuántos identificó correctamente el modelo?
+
+
+* **¿Para qué sirve?** Es la contraparte del Recall pero para los casos negativos.
+* **Comparación:** En un juicio, la ley busca alta especificidad: "Es preferible dejar libres a diez culpables que condenar a un inocente". Se busca estar muy seguro de quién es negativo (inocente).
+
+---
+
+## 6. F1-Score
+
+Es la media armónica entre la Precisión y el Recall.
+
+
+* **¿Para qué sirve?** Cuando necesitas un equilibrio entre Precisión y Recall y tienes clases desbalanceadas.
+* **Uso:** Si intentas detectar fraudes bancarios, quieres atrapar a los ladrones (Recall) pero no quieres bloquear las tarjetas de clientes honestos a cada rato (Precision). El F1-Score te da el "punto dulce".
+
+---
+
+## 7. AUC-ROC
+
+La curva ROC representa la relación entre la tasa de verdaderos positivos (Recall) y la tasa de falsos positivos. El **AUC (Área bajo la curva)** mide qué tan bueno es el modelo para distinguir entre clases.
+
+* **¿Para qué sirve?** Para medir la capacidad de **separación** del modelo, independientemente del "umbral" que elijas.
+* **Valores:**
+* **1.0:** Modelo perfecto.
+* **0.5:** El modelo es tan bueno como lanzar una moneda al aire (azar).
+
+
+
+---
+
+### Tabla Comparativa de Decisiones
+
+| Si tu prioridad es... | Usa principalmente... | Ejemplo de uso |
+| --- | --- | --- |
+| No dejar escapar ningún caso positivo | **Recall** | Detección de incendios, enfermedades graves. |
+| Estar muy seguro de lo que marcas como positivo | **Precision** | Clasificación de contenido adulto, filtros de Spam. |
+| Un balance general en datos desequilibrados | **F1-Score** | Clasificación de clientes que abandonarán un servicio. |
+| Rendimiento global en clases iguales | **Accuracy** | Reconocimiento de caracteres (OCR). |
+
+¿Te gustaría que aplicáramos estas métricas a algún caso de estudio específico que tengas en mente?
