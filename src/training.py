@@ -5,6 +5,7 @@ from pathlib                    import Path
 from src.parser                 import YamlParser
 from sklearn.preprocessing      import StandardScaler
 from sklearn.linear_model       import LogisticRegression
+from sklearn.pipeline import Pipeline
 
 import pandas as pd
 
@@ -28,7 +29,7 @@ def create_variables(df: pd.DataFrame, feature_importances: bool, cols_fi: list[
     else:
         X = df.drop('Attrition', axis=1)
 
-    y = df['Attrition']
+    y = df['Attrition'].map({'Yes': 1, 'No': 0})
 
     return train_test_split(
         X, y,
@@ -37,7 +38,7 @@ def create_variables(df: pd.DataFrame, feature_importances: bool, cols_fi: list[
         stratify        = y
     )
 
-def training_model_rf(X_train, y_train) -> RandomForestClassifier:
+def training_model_rf(pipeline: Pipeline) -> RandomForestClassifier:
     """Genera un modelo de RF optimizado y lo entrena
 
     Args:
@@ -49,25 +50,20 @@ def training_model_rf(X_train, y_train) -> RandomForestClassifier:
     """
 
     param_grid = {
-        'n_estimators'      : config['params']['n_estimators'],
-        'max_depth'         : config['params']['max_depth'],
-        'min_samples_leaf'  : config['params']['min_samples_leaf']
+        'model__n_estimators'      : config['params']['n_estimators'],
+        'model__max_depth'         : config['params']['max_depth'],
+        'model__min_samples_leaf'  : config['params']['min_samples_leaf']
     }
 
     grid_search = GridSearchCV(
-        estimator   = RandomForestClassifier(random_state=config['params']['random_state'],class_weight=config['params']['class_weight_rfc']),
+        estimator   = pipeline,
         param_grid  = param_grid,
         scoring     = config['params']['recall'],
         cv          = 5,               
         n_jobs      = -1           # usa todos los núcleos del procesador
     )
 
-    grid_search.fit(X_train, y_train)
-
-    #guardar el mejor modelo
-    rf_optimizado = grid_search.best_estimator_
-
-    return rf_optimizado
+    return grid_search
 
 def variables_scaler(X_train, X_test) -> tuple :
     """Escala las variables
