@@ -56,8 +56,8 @@ def transform_label_encoding(cols: list[str], df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: data
     """
 
-    map_gender = {'Male':0,'Female':1}
-    map_yn = {'No':0,'Yes':1}
+    map_gender  =   {'Male':0,'Female':1}
+    map_yn      =   {'No':0,'Yes':1}
 
     for col in cols:
 
@@ -84,11 +84,11 @@ def transform_dummies(cols: list[str] ,df: pd.DataFrame) -> pd.DataFrame :
         pd.DataFrame: data
     """
     #dummies
-    df_clean = pd.get_dummies(df, columns=cols,drop_first=True)
+    df_clean    =   pd.get_dummies(df, columns=cols,drop_first=True)
 
     #convertir las nuevas columnas a int.
-    bool_cols = df_clean.select_dtypes(include='bool').columns
-    df_clean[bool_cols] = df_clean[bool_cols].astype(int)
+    bool_cols               =   df_clean.select_dtypes(include='bool').columns
+    df_clean[bool_cols]     =   df_clean[bool_cols].astype(int)
 
     return df_clean
 
@@ -136,9 +136,8 @@ def drop_extra_columns(df: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame: data
     """
-    extra_cols = ['DailyRate','MonthlyRate','HourlyRate','EmployeeNumber']
-
-    df_clean = df.drop(columns=extra_cols)
+    extra_cols  =   ['DailyRate','MonthlyRate','HourlyRate','EmployeeNumber']
+    df_clean    =   df.drop(columns=extra_cols)
 
     return df_clean
 
