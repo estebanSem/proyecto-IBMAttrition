@@ -247,9 +247,9 @@ def show_auc_roc(model, X_test, y_test):
         auc_score: auc_score
     """
 
-    y_probs     = model.predict_proba(X_test)[:, 1]
-    fpr, tpr    = roc_curve(y_test, y_probs)
-    auc_score   = roc_auc_score(y_test, y_probs)
+    y_probs                 = model.predict_proba(X_test)[:, 1]
+    fpr, tpr, umbrales      = roc_curve(y_test, y_probs)
+    auc_score               = roc_auc_score(y_test, y_probs)
 
     df_roc = pd.DataFrame({
         'FPR': fpr,

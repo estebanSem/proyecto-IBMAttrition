@@ -129,10 +129,10 @@ def final_pipeline(f_importance:    bool = False,
 
     if logistic_reg:
 
-        steps.append(('scaler', StandardScaler()))
-
         if smote:
             steps.append(('smote', SMOTEENN(random_state=42)))
+
+        steps.append(('scaler', StandardScaler()))
 
         if coef:
             steps.append(

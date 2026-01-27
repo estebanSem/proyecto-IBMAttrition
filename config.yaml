@@ -5,7 +5,7 @@ paths:
     clean_data: "data/clean_data.csv"
 
   models: 
-    model_path: "models/best_model.pkl"
+    path: "models"
 
 params:
   target: 'Attrition'
