@@ -31,6 +31,25 @@ dummies           = get_more_two_values_cols(df)
 extra_cols        = ['DailyRate','MonthlyRate','HourlyRate','EmployeeNumber','JobLevel','YearsInCurrentRole','TotalWorkingYears']
 log_cols          = ['MonthlyIncome']
 
+def create_variables(df: pd.DataFrame) -> train_test_split:
+    """crea las variables para entrenar el modelo, con todas las columnas, o con las mas importantes
+    Args:
+        df (pd.DataFrame): data
+        feature_importances (bool): False, no se hace nada. True, X seran las 15 variables con mas peso
+        cols_fi (list[str] | None): columnas con mas peso. Puede llegar o no llegar-> None
+    Returns:
+        train_test_split: division de variables
+    """
+    X = df.drop('Attrition', axis=1)
+    y = df['Attrition'].map({'Yes': 1, 'No': 0})
+
+    return train_test_split(
+        X, y,
+        test_size       = config['params']['test_size'],
+        random_state    = config['params']['random_state'],
+        stratify        = y
+    )
+
 def data_preprocessing() -> ColumnTransformer :
     """ColumnTransformer para el preprocesado de los datos
 
