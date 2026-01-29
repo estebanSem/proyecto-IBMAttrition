@@ -27,7 +27,7 @@ df = create_df('raw_data')
 df = df.drop(columns=['Attrition'])
 
 
-def setup_data() -> tuple
+def setup_data() -> tuple:
 
     #columnas con un valor
     one_value_cols    = get_one_value_col(df)
@@ -100,7 +100,7 @@ def data_preprocessing() -> ColumnTransformer :
 
 def final_pipeline(model_type:          str,
                    use_importances:     bool = False,
-                   use_smote:           bool = False) -> Pipeline :
+                   use_smote:           bool = False) -> ImPipeline :
     """Crea pipelines segun el tipo de modelo y segun las necesidades especificadas.
         SMOTE solo se aplicara a Regresion Logistica
         Se podran entrenar los modelos con todas o las 15 variables con mas peso
@@ -123,26 +123,20 @@ def final_pipeline(model_type:          str,
     #IMPORTANTE: En cualquiera de los casos, el ultimo APPEND ha de ser el del modelo
     if model_type == config['params']['model_type']['random_forest']:
 
-        #2.se hace un preentreno del modelo, para saber las 15 variables con mas peso
-        if use_importances:
-            steps.append(
-                ('feature_importances', SelectFromModel(
-                            RandomForestClassifier(
-                                random_state=config['params']['trainning']['random_state'],
-                                class_weight=config['params']['trainning']['class_weight_rfc']
-                            ),
-                        max_features=15,
-                        threshold=-np.inf
-                    )
-                )
-            )
+        #Predefino class_weight para que al usar SMOTE, no aplicarle 'balanced'
+        class_weight = config['params']['trainning']['class_weight_rfc']
+
+        if use_smote:
+            steps.append(('smote', SMOTEENN(random_state=config['params']['trainning']['random_state'])))
+            #asignamos None porque usamos SMOTE 
+            class_weight = None
 
         #3.entreno del modelo
         steps.append(
-            ('model', RandomForestClassifier(random_state=config['params']['trainning']['random_state'], class_weight=config['params']['trainning']['class_weight_rfc'])) #entreno del modelo
+            ('model', RandomForestClassifier(random_state=config['params']['trainning']['random_state'], class_weight=class_weight)) #entreno del modelo
         )
 
-        model_pipeline = Pipeline(
+        model_pipeline = ImPipeline(
             steps=steps
         )
 

@@ -183,7 +183,7 @@ def show_feature_importances(df: pd.DataFrame ) -> px.bar:
         x           = 'Importance',
         y           = 'Feature',
         orientation = 'h', # Gráfico horizontal
-        title       = '25 variables con más peso',
+        title       = 'Variables con más peso',
         labels      = {'Importance': 'Importancia', 'Feature': 'Característica'},
         color       = 'Importance',                          
         color_continuous_scale = 'Viridis',
