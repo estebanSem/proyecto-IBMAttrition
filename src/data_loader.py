@@ -30,7 +30,7 @@ def serialize_models(model: LogisticRegression | RandomForestClassifier, name: s
     """Serializa el modelo, aplicandole el nombre que se le pasa por parametros
 
     Args:
-        model (LogisticRegression | RandomForestClassifier): Modelo
+        model (LogisticRegression | RandomForestClassifier): Modelo(Pipeline)
         name (str): nombre del modelo
 
     Returns:
@@ -41,4 +41,4 @@ def serialize_models(model: LogisticRegression | RandomForestClassifier, name: s
         joblib.dump(model, f'{config["paths"]["models"]["path"]}/{name}.pkl')
         return f"Modelo {name}.pkl guardado con éxito"
     except Exception as err:
-        return err
+        return f"Error al guardar el modelo:\n {err}"

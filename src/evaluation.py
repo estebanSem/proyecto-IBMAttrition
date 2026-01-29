@@ -158,13 +158,13 @@ def show_coeficientes(df: pd.DataFrame) -> px.bar:
         df.head(25),
         x                       ='Abs_Coeficiente',
         y                       ='Variable',
-        orientation             ='h',                             # Gráfico horizontal
+        orientation             ='h',# Gráfico horizontal
         title                   ='Coeficientes',
         labels                  = {'Abs_Coeficiente': 'Coeficiente', 'Variable': 'Característica'},
-        color                   ='Abs_Coeficiente',                          # Color basado en el valor
+        color                   ='Abs_Coeficiente',                         
         color_continuous_scale  ='Viridis',
         width                   = 1200,
-        height                  =800
+        height                  = 800
     )
 
     return fig
@@ -178,18 +178,17 @@ def show_feature_importances(df: pd.DataFrame ) -> px.bar:
     Returns:
         px.bar: Grafico
     """
-
     fig = px.bar(
         df.head(25),
-        x           ='Importance',
-        y           ='Feature',
-        orientation ='h',                             # Gráfico horizontal
-        title       ='25 variables con más peso',
-        labels      ={'Importance': 'Importancia', 'Feature': 'Característica'},
-        color       ='Importance',                          # Color basado en el valor
-        color_continuous_scale='Viridis',
-        width       =1200,
-        height      =800
+        x           = 'Importance',
+        y           = 'Feature',
+        orientation = 'h', # Gráfico horizontal
+        title       = '25 variables con más peso',
+        labels      = {'Importance': 'Importancia', 'Feature': 'Característica'},
+        color       = 'Importance',                          
+        color_continuous_scale = 'Viridis',
+        width       = 1200,
+        height      = 800
     )
 
     return fig
@@ -207,7 +206,7 @@ def get_feature_importances(model: RandomForestClassifier, feature_names) -> pd.
 
     feature_importances = model.feature_importances_
 
-    # 3. Crear un DataFrame para visualizar las importancias
+    # crea un DataFrame para visualizar las importancias
     importance_df = pd.DataFrame({
         'Feature'   :   feature_names,
         'Importance':   feature_importances
@@ -230,6 +229,7 @@ def show_especificidad(y_test, pred) -> int | float :
 
     tn, fp, fn, tp = confusion_matrix(y_test, pred).ravel()
 
+    #calculo de la metrica
     especificidad = tn / ( tn + fp )
 
     return especificidad
@@ -251,11 +251,13 @@ def show_auc_roc(model, X_test, y_test):
     fpr, tpr, umbrales      = roc_curve(y_test, y_probs)
     auc_score               = roc_auc_score(y_test, y_probs)
 
+    #se crea DF para pasarle al grafico
     df_roc = pd.DataFrame({
         'FPR': fpr,
         'TPR': tpr
     })
 
+    #genera gráfico
     fig = px.line(
         df_roc, 
         x       =   'FPR', 
@@ -266,6 +268,7 @@ def show_auc_roc(model, X_test, y_test):
         height  =   700
     )
 
+    #linea azar (0.5)
     fig.add_shape(
         type= 'line', 
         line= dict(dash='dash', color='black'),

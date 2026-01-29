@@ -26,6 +26,7 @@ class FeatureEngineer(BaseEstimator, TransformerMixin):
         # Años en la empresa vs Edad
         X_copy['Tenure_Age_Ratio']      =   X_copy['YearsAtCompany'] / (X_copy['Age'] + 1)
 
+        # Ratio de compañias en las que ha trabajado.
         X_copy['ratio_years_company']   =   X_copy['NumCompaniesWorked'] / X_copy['TotalWorkingYears']
         X_copy['ratio_years_company']   =   X_copy['ratio_years_company'].replace([np.inf, -np.inf], 0)
 

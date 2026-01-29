@@ -1,3 +1,4 @@
+#funciones de entrenamiento para los dos modelos, RandomForest y LogisticRegression
 import pandas     as pd
 import numpy      as np
 
@@ -21,15 +22,29 @@ YAML_FILE = Path(__file__).resolve().parent.parent / "config.yaml"
 yaml_parser = YamlParser()
 config = yaml_parser.load_yaml(YAML_FILE)
 
-
+#obtenemos el csv en crudo
 df = create_df('raw_data')
 df = df.drop(columns=['Attrition'])
 
-one_value_cols    = get_one_value_col(df)
-binary_cols       = get_binary_cols(df)
-dummies           = get_more_two_values_cols(df)
-extra_cols        = ['DailyRate','MonthlyRate','HourlyRate','EmployeeNumber','JobLevel','YearsInCurrentRole','TotalWorkingYears']
-log_cols          = ['MonthlyIncome']
+
+def setup_data() -> tuple
+
+    #columnas con un valor
+    one_value_cols    = get_one_value_col(df)
+
+    #columnas binarias
+    binary_cols       = get_binary_cols(df)
+
+    #columnas a transformar con oneHot
+    dummies           = get_more_two_values_cols(df)
+
+    #columnas con correlacion alta y sin valor predictivo
+    extra_cols        = ['DailyRate','MonthlyRate','HourlyRate','EmployeeNumber','JobLevel','YearsInCurrentRole','TotalWorkingYears']
+
+    #columnas para escala logaritmica
+    log_cols          = ['MonthlyIncome']
+
+    return one_value_cols, binary_cols, dummies, extra_cols, log_cols
 
 def create_variables(df: pd.DataFrame) -> train_test_split:
     """crea las variables para entrenar el modelo, con todas las columnas, o con las mas importantes
@@ -45,8 +60,8 @@ def create_variables(df: pd.DataFrame) -> train_test_split:
 
     return train_test_split(
         X, y,
-        test_size       = config['params']['test_size'],
-        random_state    = config['params']['random_state'],
+        test_size       = config['params']['trainning']['test_size'],
+        random_state    = config['params']['trainning']['random_state'],
         stratify        = y
     )
 
@@ -56,6 +71,9 @@ def data_preprocessing() -> ColumnTransformer :
     Returns:
         ColumnTransformer: Transformador de columnas
     """
+    #obtener columnas a tratar
+    one_value_cols, binary_cols, dummies, extra_cols, log_cols = setup_data()
+
 
     preprocesador = ColumnTransformer(
         transformers = [
@@ -80,12 +98,12 @@ def data_preprocessing() -> ColumnTransformer :
 
     return preprocesador
 
-def final_pipeline(f_importance:    bool = False, 
-                   random_forest:   bool = False, 
-                   logistic_reg:    bool = False,
-                   smote:           bool = False,
-                   coef:            bool = False) -> Pipeline :
-    """_summary_
+def final_pipeline(model_type:          str,
+                   use_importances:     bool = False,
+                   use_smote:           bool = False) -> Pipeline :
+    """Crea pipelines segun el tipo de modelo y segun las necesidades especificadas.
+        SMOTE solo se aplicara a Regresion Logistica
+        Se podran entrenar los modelos con todas o las 15 variables con mas peso
 
     Args:
         f_importance (bool, optional): _description_. Defaults to False.
@@ -96,22 +114,22 @@ def final_pipeline(f_importance:    bool = False,
     Returns:
         Pipeline: _description_
     """
+    #1. primeros dos steps
     steps = [
         ('engineering', FeatureEngineer()), #creo las nuevas variables
         ('preprocessing', data_preprocessing()), #se hace el preprocesado
     ]
 
-    #añado a steps uno de los modelos.
     #IMPORTANTE: En cualquiera de los casos, el ultimo APPEND ha de ser el del modelo
-    if random_forest:
+    if model_type == config['params']['model_type']['random_forest']:
 
-        if f_importance:
-            #se hace un preentreno del modelo, para saber las 15 variables con mas peso
+        #2.se hace un preentreno del modelo, para saber las 15 variables con mas peso
+        if use_importances:
             steps.append(
                 ('feature_importances', SelectFromModel(
                             RandomForestClassifier(
-                                random_state=42,
-                                class_weight='balanced'
+                                random_state=config['params']['trainning']['random_state'],
+                                class_weight=config['params']['trainning']['class_weight_rfc']
                             ),
                         max_features=15,
                         threshold=-np.inf
@@ -119,29 +137,33 @@ def final_pipeline(f_importance:    bool = False,
                 )
             )
 
+        #3.entreno del modelo
         steps.append(
-            ('model', RandomForestClassifier(random_state=42, class_weight='balanced')) #entreno del modelo
+            ('model', RandomForestClassifier(random_state=config['params']['trainning']['random_state'], class_weight=config['params']['trainning']['class_weight_rfc'])) #entreno del modelo
         )
 
         model_pipeline = Pipeline(
             steps=steps
         )
 
-    if logistic_reg:
+    elif model_type == config['params']['model_type']['logistic_regression']:
 
-        if smote:
-            steps.append(('smote', SMOTEENN(random_state=42)))
+        #2.añadimos SMOTE al pipeline si se requiere
+        if use_smote:
+            steps.append(('smote', SMOTEENN(random_state=config['params']['trainning']['random_state'])))
 
+        #3.escalado de datos
         steps.append(('scaler', StandardScaler()))
 
-        if coef:
+        #4.se hace un preentreno del modelo, para saber las 15 variables con mas peso
+        if use_importances:
             steps.append(
                 ('coef', SelectFromModel(
                         LogisticRegression(
                             penalty     ='l1', 
                             solver      ='liblinear',
-                            random_state= 42,
-                            class_weight='balanced'
+                            random_state= config['params']['trainning']['random_state'],
+                            class_weight= config['params']['trainning']['class_weight_lr']
                         ),
                         max_features    = 15,
                         threshold       = -np.inf
@@ -149,12 +171,13 @@ def final_pipeline(f_importance:    bool = False,
                 )
             )
 
+        #5.entreno del modelo
         steps.append(
             ('model', LogisticRegression(
-                    random_state    =   config['params']['random_state'],
-                    class_weight    =   'balanced'
+                    random_state    =   config['params']['trainning']['random_state'],
+                    class_weight    =   config['params']['trainning']['class_weight_lr']
                 )
-            ) #entreno del modelo
+            )
         )
 
         model_pipeline = ImPipeline(
@@ -177,15 +200,15 @@ def apply_grid_search(pipeline: Pipeline) -> RandomForestClassifier:
     """
 
     param_grid = {
-        'model__n_estimators'      : config['params']['n_estimators'],
-        'model__max_depth'         : config['params']['max_depth'],
-        'model__min_samples_leaf'  : config['params']['min_samples_leaf']
+        'model__n_estimators'      : config['params']['trainning']['n_estimators'],
+        'model__max_depth'         : config['params']['trainning']['max_depth'],
+        'model__min_samples_leaf'  : config['params']['trainning']['min_samples_leaf']
     }
 
     grid_search = GridSearchCV(
         estimator   = pipeline,
         param_grid  = param_grid,
-        scoring     = config['params']['recall'],
+        scoring     = config['params']['trainning']['recall'],
         cv          = 5,               
         n_jobs      = -1           # usa todos los núcleos del procesador
     )
