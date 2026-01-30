@@ -101,18 +101,15 @@ def data_preprocessing() -> ColumnTransformer :
 def final_pipeline(model_type:          str,
                    use_importances:     bool = False,
                    use_smote:           bool = False) -> ImPipeline :
-    """Crea pipelines segun el tipo de modelo y segun las necesidades especificadas.
-        SMOTE solo se aplicara a Regresion Logistica
-        Se podran entrenar los modelos con todas o las 15 variables con mas peso
+    """Entrena los modelos con diferentes tecnicas mediante un Pipeline
 
     Args:
-        f_importance (bool, optional): _description_. Defaults to False.
-        random_forest (bool, optional): _description_. Defaults to False.
-        logistic_reg (bool, optional): _description_. Defaults to False.
-        smote (bool, optional): _description_. Defaults to False.
+        model_type (str): tipo de modelo. Random Forest o Regresion Lineal
+        use_importances (bool, optional): Si se entrena el modelo con las 15 variables con más peso
+        use_smote (bool, optional): Si se aplica o no SMOTE al entrenamiento
 
     Returns:
-        Pipeline: _description_
+        ImPipeline: Pipeline 
     """
     #1. primeros dos steps
     steps = [
@@ -142,9 +139,15 @@ def final_pipeline(model_type:          str,
 
     elif model_type == config['params']['model_type']['logistic_regression']:
 
+        #Predefino class_weight para que al usar SMOTE, no aplicarle 'balanced'
+        class_weight = config['params']['trainning']['class_weight_lr']
+
         #2.añadimos SMOTE al pipeline si se requiere
         if use_smote:
             steps.append(('smote', SMOTEENN(random_state=config['params']['trainning']['random_state'])))
+
+            #asignamos None porque usamos SMOTE 
+            class_weight = None
 
         #3.escalado de datos
         steps.append(('scaler', StandardScaler()))
@@ -157,7 +160,7 @@ def final_pipeline(model_type:          str,
                             penalty     ='l1', 
                             solver      ='liblinear',
                             random_state= config['params']['trainning']['random_state'],
-                            class_weight= config['params']['trainning']['class_weight_lr']
+                            class_weight= class_weight
                         ),
                         max_features    = 15,
                         threshold       = -np.inf
@@ -169,7 +172,7 @@ def final_pipeline(model_type:          str,
         steps.append(
             ('model', LogisticRegression(
                     random_state    =   config['params']['trainning']['random_state'],
-                    class_weight    =   config['params']['trainning']['class_weight_lr']
+                    class_weight    =   class_weight
                 )
             )
         )
@@ -190,7 +193,7 @@ def apply_grid_search(pipeline: Pipeline) -> RandomForestClassifier:
         y_train (_type_): y_train
 
     Returns:
-        RandomForestClassifier: _description_
+        RandomForestClassifier: modelo optimizado
     """
 
     param_grid = {

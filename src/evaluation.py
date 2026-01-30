@@ -68,7 +68,7 @@ def show_bar(df: pd.DataFrame, x: str, y: str) -> px.bar:
     
     return gr
 
-def show_metricas(y_test, pred) -> str | dict:
+def show_metricas(y_test, pred, output_dict: bool = False) -> str | dict:
     """Funcion para obtener las metricas del modelo entrenado
 
     Args:
@@ -82,7 +82,7 @@ def show_metricas(y_test, pred) -> str | dict:
     accuracy_final  =   accuracy_score(y_test, pred)
 
     # Obtener el reporte de clasificacion
-    reporte_final   =   classification_report(y_test, pred)
+    reporte_final   =   classification_report(y_test, pred, output_dict=output_dict)
 
     return reporte_final, accuracy_final
 
