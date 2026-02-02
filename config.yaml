@@ -1,0 +1,24 @@
+# config.yml
+paths:
+  data:
+    raw_data: "data/train.csv"
+    clean_data: "data/clean_data.csv"
+
+  models: 
+    path: "models"
+
+params:
+  trainning:
+    target: 'Attrition'
+    test_size: 0.2
+    random_state: 42
+    class_weight_rfc: "balanced_subsample"
+    class_weight_lr: "balanced"
+    recall: "recall"
+    n_estimators: [100,200,500]
+    max_depth: [5,10,null]
+    min_samples_leaf: [1,5,10]
+  
+  model_type:
+    random_forest: "random_forest"
+    logistic_regression: "logistic_regression"
