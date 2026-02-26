@@ -185,7 +185,7 @@ def final_pipeline(model_type:          str,
     return model_pipeline
 
 
-def apply_grid_search(pipeline: Pipeline, score: str = 'recall') -> RandomForestClassifier:
+def apply_grid_search(pipeline: Pipeline, score: str = 'recall', param_grid) -> RandomForestClassifier:
     """Genera un modelo de RF optimizado y lo entrena
 
     Args:
@@ -195,12 +195,6 @@ def apply_grid_search(pipeline: Pipeline, score: str = 'recall') -> RandomForest
     Returns:
         RandomForestClassifier: modelo optimizado
     """
-
-    param_grid = {
-        'model__n_estimators'      : config['params']['trainning']['n_estimators'],
-        'model__max_depth'         : config['params']['trainning']['max_depth'],
-        'model__min_samples_leaf'  : config['params']['trainning']['min_samples_leaf']
-    }
 
     grid_search = GridSearchCV(
         estimator   = pipeline,
